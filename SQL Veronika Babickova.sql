@@ -96,19 +96,23 @@ ORDER  BY potravina_nazev, vvbpspfm .rok;
  * vysledny script pro otazku c.3
  */
 
-WITH zdrazPot AS (
-	SELECT 
+WITH zdrazPOT AS ( 
+SELECT 		
+		rok,
 		potravina_nazev ,
-		round (potravina_prum_cena / lead(potravina_prum_cena,-1) OVER (ORDER BY potravina_nazev, rok),2) AS zdrazeni
+		round (potravina_prum_cena / lead(potravina_prum_cena,-1) OVER (ORDER BY potravina_nazev, rok),2) AS zdrazeniVproc
 	FROM t_veronika_babickovabalkova_project_SQL_primary_final tvbpspf
 	WHERE rok <> 2006 AND rok <> 2018
-	)
-SELECT
+GROUP BY rok, potravina_nazev 
+ORDER BY potravina_nazev , rok
+)
+SELECT 
 	potravina_nazev ,
-	sum (zdrazeni)
-FROM zdrazPot
+	sum (zdrazeniVproc)
+FROM 
+zdrazPOT
 GROUP BY potravina_nazev 
-ORDER BY sum (zdrazeni);
+ORDER BY sum (zdrazeniVproc);
 
 
 /*
@@ -141,7 +145,7 @@ FROM comparison_mzdy_ceny;
 
 -- základní tabulka --
 
-CREATE OR REPLACE TABLE t_verobab 
+CREATE OR REPLACE TABLE t_veronika_babickovabalkova_project_sql_secondary_final
 SELECT 
 	e.country,
 	e.`year` ,
@@ -160,7 +164,7 @@ SELECT
 	country,
 	year,
 	gdp
-FROM t_verobab tv
+FROM t_veronika_babickovabalkova_project_sql_secondary_final
 WHERE country = 'Czech republic';
 
 -- pomocny view 2 prumer cen a mezd --
@@ -177,10 +181,10 @@ GROUP BY rok;
 
 CREATE OR REPLACE VIEW v_veronika_babickovabalkova_project_SQL_secondary_gdpmzdyceny AS
 SELECT
-PruCenPotr / lead (PruCenPotr,-1) OVER (ORDER BY rok) AS CenPotrMeziro,
-PruMzda / lead (PruMzda,-1) OVER (ORDER BY rok) AS MzdyMeziro,
-GDP / lead (GDP, -1) OVER (ORDER BY rok) AS GDPMeziro,
-rok
+	PruCenPotr / lead (PruCenPotr,-1) OVER (ORDER BY rok) AS CenPotrMeziro,
+	PruMzda / lead (PruMzda,-1) OVER (ORDER BY rok) AS MzdyMeziro,
+	GDP / lead (GDP, -1) OVER (ORDER BY rok) AS GDPMeziro,
+	rok
 FROM v_veronika_babickovabalkova_project_SQL_secondary_mzdyAceny vvbpssm 
 JOIN v_veronika_babickovabalkova_project_sql_secondary_cz vvbpssc 
 ON vvbpssm.rok = vvbpssc.`year` ;
@@ -188,15 +192,15 @@ ON vvbpssm.rok = vvbpssc.`year` ;
 -- zjisteni referencnich hodnot --
 
 SELECT
-avg (CenPotrMeziro) AS CPM,
-avg (MzdyMeziro),
-avg (GDPMeziro)
+	avg (CenPotrMeziro) AS CPM,
+	avg (MzdyMeziro),
+	avg (GDPMeziro)
 FROM v_veronika_babickovabalkova_project_SQL_secondary_gdpmzdyceny vvbpssg;
 
 -- vlastni skript --
 
 SELECT 
-rok,
+	rok,
 CASE 
 	WHEN GDPMeziro >1.02127 THEN 'vyrazny vzrust GDP' ELSE 0
 	END AS vlivGDP,
@@ -208,3 +212,10 @@ CASE
 	END AS mzdy	
 FROM v_veronika_babickovabalkova_project_SQL_secondary_gdpmzdyceny vvbpssg 
 ORDER BY vlivGDP desc;
+
+SELECT 
+ 	country ,
+	 `year` ,
+	 GDP 
+FROM t_veronika_babickovabalkova_project_sql_secondary_final tvbpssf 
+WHERE country LIKE 'Czech Republic';
